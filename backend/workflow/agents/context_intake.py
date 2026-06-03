@@ -1,7 +1,7 @@
-import json
 import os
 from langchain_upstage import ChatUpstage
 from workflow.state import GraphState
+from workflow.utils import call_llm_with_json_retry
 
 _llm = None
 
@@ -24,8 +24,7 @@ def context_intake_node(state: GraphState) -> dict:
         communication_type=state["communication_type"],
         input_text=state["input_text"],
     )
-    response = _get_llm().invoke(prompt)
-    result = json.loads(response.content)
+    result = call_llm_with_json_retry(_get_llm(), prompt)
     print("[1/5] context_intake 완료")
     return {
         "context_analysis": result,
