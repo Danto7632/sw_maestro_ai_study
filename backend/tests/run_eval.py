@@ -20,7 +20,19 @@ async def run_case(client: httpx.AsyncClient, case: dict) -> dict:
     expected = case["expected"]
 
     try:
-        response = await client.post(API_URL, json=case["input"], timeout=300.0)
+        inp = case["input"]
+        # senderRole/receiverRole → participants 변환 (하위 호환)
+        if "senderRole" in inp:
+            receiver_roles = [r.strip() for r in inp["receiverRole"].split(",") if r.strip()]
+            payload = {
+                "text": inp["text"],
+                "participants": [{"name": inp["senderRole"], "role": inp["senderRole"]}]
+                    + [{"name": r, "role": r} for r in receiver_roles],
+                "communicationType": inp["communicationType"],
+            }
+        else:
+            payload = inp
+        response = await client.post(API_URL, json=payload, timeout=300.0)
         status = response.status_code
         status_ok = status == expected["status"]
 
