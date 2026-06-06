@@ -10,6 +10,47 @@ export type AnalyzeRequest = {
   communicationType: string;
 };
 
+export type Participant = {
+  name: string;
+  role: string;
+};
+
+export type AnalyzeApiRequest = {
+  text: string;
+  participants: Participant[];
+  communicationType: string;
+};
+
+export type JobResponse = {
+  job_id: string;
+};
+
+export type WorkflowStep =
+  | "context_intake"
+  | "word_extractor"
+  | "role_worker"
+  | "risk_term"
+  | "synthesis"
+  | "report";
+
+export type WorkflowProgressEvent = {
+  type: "progress";
+  step: WorkflowStep;
+  label: string;
+};
+
+export type WorkflowDoneEvent = {
+  type: "done";
+  result: AnalyzeResponse;
+};
+
+export type WorkflowErrorEvent = {
+  type: "error";
+  message: string;
+};
+
+export type WorkflowEvent = WorkflowProgressEvent | WorkflowDoneEvent | WorkflowErrorEvent;
+
 export type TermAnalysis = {
   term: string;
   context: string;

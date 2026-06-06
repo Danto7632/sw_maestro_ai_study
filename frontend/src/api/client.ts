@@ -1,9 +1,13 @@
 import { testCases } from "../data/testCases";
 import type {
   AnalysisHistoryItem,
+  AnalyzeApiRequest,
   AnalyzeRequest,
   AnalyzeResponse,
+  JobResponse,
   TestCase,
+  WorkflowEvent,
+  WorkflowProgressEvent,
 } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "";
@@ -22,32 +26,24 @@ export function findMockCase(request: AnalyzeRequest): TestCase {
   );
 }
 
-export async function analyzeText(request: AnalyzeRequest): Promise<AnalyzeResponse> {
-  const mock = findMockCase(request);
+export async function analyzeText(
+  request: AnalyzeRequest,
+  onProgress: (event: WorkflowProgressEvent) => void,
+): Promise<AnalyzeResponse> {
+  const startResponse = await fetch(`${API_BASE_URL}/api/analyze`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(toApiRequest(request)),
+  });
+  const startBody = (await startResponse.json()) as JobResponse | { detail?: string; message?: string };
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/analyze`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request),
-    });
-
-    const body = (await response.json()) as AnalyzeResponse;
-
-    if (!response.ok) {
-      throw new Error(body.message ?? "분석 요청에 실패했습니다.");
-    }
-
-    return {
-      ...body,
-      route: body.route ?? mock.route,
-    };
-  } catch (error) {
-    console.warn("Falling back to mock analysis:", error);
-    return mock.response;
+  if (!startResponse.ok) {
+    throw new Error(getErrorMessage(startBody, "분석 요청에 실패했습니다."));
   }
+
+  return receiveAnalysisStream((startBody as JobResponse).job_id, onProgress);
 }
 
 export async function getAnalyses(): Promise<AnalysisHistoryItem[]> {
@@ -84,4 +80,73 @@ function getErrorMessage(body: unknown, fallback: string) {
   }
 
   return fallback;
+}
+
+function toApiRequest(request: AnalyzeRequest): AnalyzeApiRequest {
+  return {
+    text: request.text,
+    participants: [
+      { name: "발화자", role: request.senderRole },
+      { name: "수신자", role: request.receiverRole },
+    ],
+    communicationType: request.communicationType,
+  };
+}
+
+async function receiveAnalysisStream(
+  jobId: string,
+  onProgress: (event: WorkflowProgressEvent) => void,
+): Promise<AnalyzeResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/analyze/${encodeURIComponent(jobId)}/stream`, {
+    headers: { Accept: "text/event-stream" },
+  });
+
+  if (!response.ok || !response.body) {
+    const body = await response.json().catch(() => null);
+    throw new Error(getErrorMessage(body, "분석 진행 스트림 연결에 실패했습니다."));
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+
+    const blocks = buffer.split("\n\n");
+    buffer = blocks.pop() ?? "";
+
+    for (const block of blocks) {
+      const event = parseSseBlock(block);
+
+      if (!event) {
+        continue;
+      }
+
+      if (event.type === "progress") {
+        onProgress(event);
+      } else if (event.type === "done") {
+        return event.result;
+      } else {
+        throw new Error(event.message);
+      }
+    }
+
+    if (done) {
+      break;
+    }
+  }
+
+  throw new Error("분석 스트림이 결과 없이 종료되었습니다.");
+}
+
+function parseSseBlock(block: string): WorkflowEvent | null {
+  const data = block
+    .split("\n")
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice(5).trim())
+    .join("\n");
+
+  return data ? (JSON.parse(data) as WorkflowEvent) : null;
 }
