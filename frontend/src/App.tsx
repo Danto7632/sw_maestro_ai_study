@@ -6,7 +6,14 @@ import { AnalysisHistory } from "./components/AnalysisHistory";
 import { ReportView } from "./components/ReportView";
 import { Sidebar } from "./components/Sidebar";
 import { WorkflowStatus } from "./components/WorkflowStatus";
-import type { AnalyzeRequest, AnalyzeResponse, AnalyzeState, AppPage } from "./types";
+import type {
+  AnalyzeRequest,
+  AnalyzeResponse,
+  AnalyzeState,
+  AppPage,
+  WorkflowProgressEvent,
+  WorkflowStep,
+} from "./types";
 
 const initialRequest: AnalyzeRequest = {
   text: "",
@@ -23,26 +30,44 @@ export default function App() {
   const [error, setError] = useState("");
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [activePage, setActivePage] = useState<AppPage>("analyze");
+  const [completedSteps, setCompletedSteps] = useState<WorkflowStep[]>([]);
+  const [progressLabel, setProgressLabel] = useState("");
 
   const handleAnalyze = async () => {
-    if (!request.text.trim() || !request.communicationType) {
-      setError("분석할 텍스트와 소통 유형을 입력해주세요.");
+    if (
+      !request.text.trim() ||
+      !request.senderRole ||
+      !request.receiverRole ||
+      !request.communicationType
+    ) {
+      setError("분석할 텍스트, 발화자·수신자 직군, 소통 유형을 모두 입력해주세요.");
       setState("error");
       return;
     }
 
     setState("loading");
     setError("");
+    setReport(null);
+    setCompletedSteps([]);
+    setProgressLabel("분석 작업을 시작하는 중입니다.");
 
     try {
-      const response = await analyzeText(request);
+      const response = await analyzeText(request, handleProgress);
       setReport(response);
       setState("success");
+      setProgressLabel("최종 보고서 생성 완료");
       setHistoryRefreshKey((current) => current + 1);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "분석 중 오류가 발생했습니다.");
       setState("error");
     }
+  };
+
+  const handleProgress = (event: WorkflowProgressEvent) => {
+    setProgressLabel(event.label);
+    setCompletedSteps((current) =>
+      current.includes(event.step) ? current : [...current, event.step],
+    );
   };
 
   const handleHistorySelect = (selectedReport: AnalyzeResponse) => {
@@ -93,7 +118,12 @@ export default function App() {
                   onChange={setRequest}
                   onSubmit={handleAnalyze}
                 />
-                <WorkflowStatus state={state} route={report?.route} />
+                <WorkflowStatus
+                  state={state}
+                  route={report?.route}
+                  completedSteps={completedSteps}
+                  progressLabel={progressLabel}
+                />
               </div>
 
               <div className="mt-6">

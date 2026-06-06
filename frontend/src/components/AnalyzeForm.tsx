@@ -22,7 +22,7 @@ export function AnalyzeForm({
         <div>
           <h2 className="text-lg font-black text-ink">협업 텍스트 입력</h2>
           <p className="mt-1 text-sm text-muted">
-            API 문서의 요청 필드만 사용합니다: text, senderRole, receiverRole, communicationType.
+            선택한 발화자와 수신자 직군은 participants 배열로 변환해 전송합니다.
           </p>
         </div>
         <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-brand">
@@ -67,7 +67,7 @@ export function AnalyzeForm({
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs font-bold text-muted">
-          입력값 그대로 POST /api/analyze 요청을 보내고, 개발 모드에서는 MSW가 응답합니다.
+          분석 시작 후 SSE로 Agent Workflow 진행 상황과 최종 보고서를 수신합니다.
         </p>
         <button
           type="button"
