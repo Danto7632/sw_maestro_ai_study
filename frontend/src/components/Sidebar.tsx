@@ -1,30 +1,68 @@
-import { ClipboardList, FileText, GitBranch, History, MessageSquareText } from "lucide-react";
+import clsx from "clsx";
+import { ClipboardList, History, MessageSquareText } from "lucide-react";
+import type { AppPage } from "../types";
 
-const steps = ["입력", "워크플로우", "보고서", "분석 이력"];
-const icons = [MessageSquareText, GitBranch, FileText, History];
+const navItems: Array<{ id: AppPage; label: string; description: string; icon: typeof History }> = [
+  {
+    id: "analyze",
+    label: "분석하기",
+    description: "협업 텍스트 분석",
+    icon: MessageSquareText,
+  },
+  {
+    id: "history",
+    label: "분석 이력",
+    description: "완료 보고서 조회",
+    icon: History,
+  },
+];
 
-export function Sidebar() {
+export function Sidebar({
+  activePage,
+  onNavigate,
+}: {
+  activePage: AppPage;
+  onNavigate: (page: AppPage) => void;
+}) {
   return (
-    <aside className="flex min-h-screen w-64 shrink-0 flex-col bg-slate-950 px-5 py-7 text-white">
+    <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col bg-slate-950 px-5 py-7 text-white">
       <div>
         <p className="text-2xl font-black tracking-tight">ContextBridge</p>
         <p className="mt-2 text-xs font-medium text-slate-400">협업 문맥 오해 탐지 Agent</p>
       </div>
 
       <nav className="mt-12 grid gap-2">
-        {steps.map((step, index) => {
-          const Icon = icons[index];
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = item.id === activePage;
 
           return (
-          <div
-            key={step}
-            className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold ${
-              index === 0 ? "bg-slate-800 text-white" : "text-slate-400"
-            }`}
-          >
-            <Icon className="h-4 w-4" />
-            {index + 1}. {step}
-          </div>
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onNavigate(item.id)}
+              className={clsx(
+                "flex items-center gap-3 rounded-lg px-3 py-3 text-left transition",
+                isActive
+                  ? "bg-slate-800 text-white"
+                  : "text-slate-400 hover:bg-slate-900 hover:text-white",
+              )}
+            >
+              <span
+                className={clsx(
+                  "grid h-9 w-9 shrink-0 place-items-center rounded-lg",
+                  isActive ? "bg-brand text-white" : "bg-slate-900 text-slate-400",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-black">{item.label}</span>
+                <span className="mt-0.5 block text-xs font-medium text-slate-500">
+                  {item.description}
+                </span>
+              </span>
+            </button>
           );
         })}
       </nav>

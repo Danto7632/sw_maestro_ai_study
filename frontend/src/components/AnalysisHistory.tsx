@@ -41,7 +41,7 @@ export function AnalysisHistory({ refreshKey, onSelect, onError }: AnalysisHisto
   };
 
   return (
-    <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-panel">
+    <section className="rounded-lg border border-line bg-white p-5 shadow-panel">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-lg font-black text-ink">

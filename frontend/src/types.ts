@@ -51,3 +51,5 @@ export type TestCase = {
 };
 
 export type AnalyzeState = "idle" | "loading" | "success" | "error";
+
+export type AppPage = "analyze" | "history";

@@ -15,16 +15,20 @@ import { riskClass, routeLabel } from "../utils";
 
 type ReportViewProps = {
   report: AnalyzeResponse | null;
+  emptyMessage?: string;
 };
 
-export function ReportView({ report }: ReportViewProps) {
+export function ReportView({
+  report,
+  emptyMessage = "분석을 실행하면 이 영역에 보고서형 결과가 표시됩니다.",
+}: ReportViewProps) {
   const [isDocxExporting, setIsDocxExporting] = useState(false);
 
   if (!report) {
     return (
       <section className="rounded-lg border border-dashed border-line bg-white p-8 text-center shadow-panel">
         <p className="text-sm font-bold text-muted">
-          분석을 실행하면 이 영역에 보고서형 결과가 표시됩니다.
+          {emptyMessage}
         </p>
       </section>
     );
